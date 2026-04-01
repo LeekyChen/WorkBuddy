@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import sys
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -13,23 +14,6 @@ from .dnd import DndController
 from .llm import LlmClient
 from .persona import load_persona
 from .prompting import PromptContext, build_proactive_prompt
-
-
-class _Worker(QtCore.QObject):
-    finished = QtCore.Signal(str)
-    failed = QtCore.Signal(str)
-
-    def __init__(self, fn):
-        super().__init__()
-        self._fn = fn
-
-    @QtCore.Slot()
-    def run(self):
-        try:
-            text = self._fn()
-            self.finished.emit(text)
-        except Exception as e:
-            self.failed.emit(str(e))
 
 
 @dataclass
@@ -82,7 +66,8 @@ class ProactiveTalker(QtCore.QObject):
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._on_timeout)
 
-        self._thread = None
+        self._inflight = False
+        self._stopping = False
 
     def start(self):
         if not self.cfg.enabled:
@@ -96,6 +81,17 @@ class ProactiveTalker(QtCore.QObject):
     def trigger_once(self):
         """Manual/test trigger (still respects DND by default)."""
         self._do_one(reschedule=False)
+
+    def stop(self):
+        """Stop scheduling new calls.
+
+        In-flight HTTP calls cannot be forcibly killed; we run them in daemon threads so app exit won't hang.
+        """
+        self._stopping = True
+        try:
+            self._timer.stop()
+        except Exception:
+            pass
 
     def _schedule_next(self, reason: str):
         lo = max(1, self.cfg.min_minutes)
@@ -145,43 +141,40 @@ class ProactiveTalker(QtCore.QObject):
 
     def _run_in_thread(self, fn):
         # one in-flight request at a time
-        if self._thread is not None and self._thread.isRunning():
+        if self._stopping:
+            return
+        if self._inflight:
             self.debug.emit("skip proactive: inflight")
             return
 
-        self._thread = QtCore.QThread()
-        worker = _Worker(fn)
-        worker.moveToThread(self._thread)
-        self._thread.started.connect(worker.run)
+        self._inflight = True
 
-        def _cleanup():
-            # Never call wait() from within the same QThread (would warn: Thread tried to wait on itself).
-            worker.deleteLater()
-            t = self._thread
-            self._thread = None
-            if t is None:
-                return
-            t.quit()
-            # Let Qt clean up asynchronously.
-            t.finished.connect(t.deleteLater)
+        def _runner():
+            try:
+                text = fn()
 
-        def _on_finished(text: str):
-            t = (text or "").strip()
-            if not t:
-                self.debug.emit("llm empty")
-                QtCore.QTimer.singleShot(0, _cleanup)
-                return
-            t = t.replace("\n", " ").strip()
-            if len(t) > self.max_reply_chars:
-                t = t[: self.max_reply_chars].rstrip()
-            self.say.emit(t)
-            QtCore.QTimer.singleShot(0, _cleanup)
+                def _deliver_ok():
+                    try:
+                        t = (text or "").strip().replace("\n", " ")
+                        if len(t) > self.max_reply_chars:
+                            t = t[: self.max_reply_chars].rstrip()
+                        if t:
+                            self.say.emit(t)
+                        else:
+                            self.debug.emit("llm empty")
+                    finally:
+                        self._inflight = False
 
-        def _on_failed(err: str):
-            self.debug.emit(f"llm failed: {err}")
-            QtCore.QTimer.singleShot(0, _cleanup)
+                QtCore.QTimer.singleShot(0, _deliver_ok)
+            except Exception as e:
 
-        worker.finished.connect(_on_finished)
-        worker.failed.connect(_on_failed)
+                def _deliver_err():
+                    try:
+                        self.debug.emit(f"llm failed: {e}")
+                    finally:
+                        self._inflight = False
 
-        self._thread.start()
+                QtCore.QTimer.singleShot(0, _deliver_err)
+
+        th = threading.Thread(target=_runner, daemon=True)
+        th.start()

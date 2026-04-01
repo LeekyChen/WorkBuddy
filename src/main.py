@@ -34,6 +34,7 @@ def main() -> int:
     talker = ProactiveTalker(settings=settings, active_app_getter=active_app_getter)
     talker.say.connect(lambda text: bubble.show_text_near(text, pet))
     # talker.debug.connect(print)  # uncomment for debug
+    app.aboutToQuit.connect(talker.stop)
     talker.start()
 
     tray = TrayController(settings=settings, pet_window=pet, proactive_talker=talker)
