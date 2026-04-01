@@ -1,0 +1,68 @@
+app:
+  name: "Cyber Slacker"
+
+ui:
+  always_on_top: true
+  frameless: true
+  transparent: true
+  click_through_default: true
+  start_position:
+    x: 30
+    y: 30
+
+observer:
+  poll_interval_ms: 800
+
+# 主动搭话
+proactive_talk:
+  enabled: true
+  interval_min_minutes: 45
+  interval_max_minutes: 90
+
+# 勿扰：默认“不主动说话，但允许被动回复”
+dnd:
+  enabled: true
+  windows:
+    - start: "09:30"
+      end: "12:00"
+    - start: "14:00"
+      end: "18:30"
+    - start: "23:00"
+      end: "08:00"  # 支持跨天
+
+persona:
+  agent_md_path: "AGENT.md"
+  # 嘴贱等级：0=温柔，1=轻微阴阳，2=默认资深嘴臭但不人身攻击，3=火力全开（慎用）
+  snark_level: 2
+  max_reply_chars: 60
+
+apps:
+  # 用于“卷/摸鱼”判定及 prompt 上下文
+  categories:
+    ide:
+      - "Code.exe"
+      - "Cursor.exe"
+      - "VSCodium.exe"
+      - "idea64.exe"
+      - "pycharm64.exe"
+    terminal:
+      - "WindowsTerminal.exe"
+      - "wezterm-gui.exe"
+      - "cmd.exe"
+      - "powershell.exe"
+    browser:
+      - "chrome.exe"
+      - "msedge.exe"
+      - "firefox.exe"
+    game:
+      - "steam.exe"
+      - "RiotClientServices.exe"
+    chat:
+      - "WeChat.exe"
+      - "QQ.exe"
+      - "Discord.exe"
+
+model:
+  # adapter: "ollama" | "openai_compat"
+  adapter: "ollama"
+  temperature: 0.8
