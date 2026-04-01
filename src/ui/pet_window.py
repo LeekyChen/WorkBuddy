@@ -1,24 +1,33 @@
 from __future__ import annotations
 
-import ctypes
-from ctypes import wintypes
+import sys
 
 from PySide6 import QtWidgets, QtCore, QtGui
 
 
-# Win32 constants
-GWL_EXSTYLE = -20
-WS_EX_LAYERED = 0x00080000
-WS_EX_TRANSPARENT = 0x00000020
+# Win32 click-through support is Windows-only.
+if sys.platform == "win32":
+    import ctypes
+    from ctypes import wintypes
 
-user32 = ctypes.WinDLL("user32", use_last_error=True)
+    GWL_EXSTYLE = -20
+    WS_EX_LAYERED = 0x00080000
+    WS_EX_TRANSPARENT = 0x00000020
 
-GetWindowLongW = user32.GetWindowLongW
-SetWindowLongW = user32.SetWindowLongW
-GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
-GetWindowLongW.restype = ctypes.c_long
-SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
-SetWindowLongW.restype = ctypes.c_long
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+    GetWindowLongW = user32.GetWindowLongW
+    SetWindowLongW = user32.SetWindowLongW
+    GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+    GetWindowLongW.restype = ctypes.c_long
+    SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
+    SetWindowLongW.restype = ctypes.c_long
+else:
+    GetWindowLongW = None
+    SetWindowLongW = None
+    GWL_EXSTYLE = 0
+    WS_EX_LAYERED = 0
+    WS_EX_TRANSPARENT = 0
 
 
 class PetWindow(QtWidgets.QWidget):
@@ -45,6 +54,11 @@ class PetWindow(QtWidgets.QWidget):
         )
 
         self.setFixedSize(90, 90)
+        # Make window hit-test region roughly circular (helps avoid a visible square boundary on some setups)
+        try:
+            self.setMask(QtGui.QRegion(QtCore.QRect(0, 0, self.width(), self.height()), QtGui.QRegion.RegionType.Ellipse))
+        except Exception:
+            pass
 
         lay = QtWidgets.QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -81,6 +95,8 @@ class PetWindow(QtWidgets.QWidget):
 
     def set_click_through(self, enabled: bool) -> None:
         self._click_through = enabled
+        if sys.platform != "win32" or GetWindowLongW is None or SetWindowLongW is None:
+            return
         hwnd = int(self.winId())
         ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE)
         if enabled:

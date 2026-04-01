@@ -1,0 +1,61 @@
+app:
+  name: "Cyber Slacker"
+
+ui:
+  always_on_top: true
+  frameless: true
+  transparent: true
+  click_through_default: true
+  start_position:
+    x: 30
+    y: 30
+
+observer:
+  poll_interval_ms: 800
+
+proactive_talk:
+  enabled: true
+  # 首次启动后，过几秒就先说一句，方便验收
+  startup_delay_seconds: 12
+  interval_min_minutes: 25
+  interval_max_minutes: 55
+
+# 勿扰：不主动说话（默认先关闭，方便你测试“主动搭话”）
+dnd:
+  enabled: false
+  windows:
+    - start: "23:30"
+      end: "08:30"
+
+persona:
+  agent_md_path: "AGENT.md"
+  snark_level: 2
+  max_reply_chars: 60
+
+apps:
+  categories:
+    ide:
+      - "Code.exe"
+      - "Cursor.exe"
+      - "VSCodium.exe"
+      - "idea64.exe"
+      - "pycharm64.exe"
+    terminal:
+      - "WindowsTerminal.exe"
+      - "wezterm-gui.exe"
+      - "cmd.exe"
+      - "powershell.exe"
+    browser:
+      - "chrome.exe"
+      - "msedge.exe"
+      - "firefox.exe"
+    game:
+      - "steam.exe"
+    chat:
+      - "WeChat.exe"
+      - "QQ.exe"
+      - "Discord.exe"
+
+model:
+  adapter: "openai_compat"
+  temperature: 0.8

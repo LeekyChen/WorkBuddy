@@ -6,9 +6,10 @@ from ..logic.dnd import DndController
 
 
 class TrayController:
-    def __init__(self, settings, pet_window):
+    def __init__(self, settings, pet_window, proactive_talker=None):
         self.settings = settings
         self.pet_window = pet_window
+        self.proactive_talker = proactive_talker
 
         self.dnd = DndController(settings)
 
@@ -33,6 +34,12 @@ class TrayController:
         self.action_click_through.setChecked(self.pet_window.is_click_through())
         self.action_click_through.triggered.connect(self._toggle_click_through)
         menu.addAction(self.action_click_through)
+
+        if self.proactive_talker is not None:
+            menu.addSeparator()
+            say_now = QtGui.QAction("现在说一句（测试）")
+            say_now.triggered.connect(self.proactive_talker.trigger_once)
+            menu.addAction(say_now)
 
         menu.addSeparator()
 
