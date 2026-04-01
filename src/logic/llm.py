@@ -49,11 +49,15 @@ class LlmClient:
         text = ""
         try:
             # OpenAI-style completions
-            text = (data.get("choices") or [{}])[0].get("text") or ""
+            choice0 = (data.get("choices") or [{}])[0] or {}
+            text = choice0.get("text") or ""
+            # Some gateways accidentally return chat-like shape
+            if not text:
+                text = ((choice0.get("message") or {}).get("content")) or ""
         except Exception:
             text = ""
 
-        return LlmResult(text=text.strip(), raw=data)
+        return LlmResult(text=str(text).strip(), raw=data)
 
     def chat_ollama(
         self,

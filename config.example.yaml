@@ -63,6 +63,9 @@ apps:
       - "Discord.exe"
 
 model:
-  # adapter: "ollama_chat" | "openai_compat"
-  adapter: "ollama_chat"
+  # adapter: "openai_compat" (recommended)
+  # Works with:
+  # - Ollama OpenAI-compat endpoint: http://localhost:11434/v1/completions
+  # - Remote OpenAI-compat gateways: https://.../v1/completions
+  adapter: "openai_compat"
   temperature: 0.8

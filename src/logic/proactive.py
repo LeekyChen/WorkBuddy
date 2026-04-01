@@ -168,10 +168,11 @@ class ProactiveTalker(QtCore.QObject):
 
         def _call_llm():
             # max_tokens/num_predict is a rough bound; we also hard-trim by chars later.
-            if self.adapter == "openai_compat":
+            if self.adapter in ("openai_compat", "completions"):
                 res = self.llm.complete_openai_compat(prompt=prompt, temperature=self.temperature, max_tokens=96)
                 return res
             if self.adapter in ("ollama", "ollama_chat"):
+                # Kept for compatibility, but recommend /v1/completions everywhere.
                 res = self.llm.chat_ollama(prompt=prompt, temperature=self.temperature, num_predict=96)
                 return res
             raise RuntimeError(f"Unsupported model.adapter: {self.adapter}")

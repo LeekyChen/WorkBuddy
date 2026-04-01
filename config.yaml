@@ -61,5 +61,6 @@ apps:
       - "Discord.exe"
 
 model:
-  adapter: "ollama_chat"
+  # Prefer OpenAI-compatible /v1/completions (works with local Ollama and remote gateways)
+  adapter: "openai_compat"
   temperature: 0.8
