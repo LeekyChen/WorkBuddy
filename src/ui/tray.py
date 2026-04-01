@@ -5,6 +5,25 @@ from PySide6 import QtWidgets, QtGui, QtCore
 from ..logic.dnd import DndController
 
 
+def _default_tray_icon() -> QtGui.QIcon:
+    # Ensure a non-null icon on Windows (standardIcon can be null on some setups).
+    pm = QtGui.QPixmap(64, 64)
+    pm.fill(QtCore.Qt.GlobalColor.transparent)
+    p = QtGui.QPainter(pm)
+    p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+    p.setBrush(QtGui.QColor(30, 30, 30, 220))
+    p.setPen(QtCore.Qt.PenStyle.NoPen)
+    p.drawEllipse(4, 4, 56, 56)
+    p.setPen(QtGui.QPen(QtGui.QColor(245, 245, 245)))
+    f = p.font()
+    f.setBold(True)
+    f.setPointSize(18)
+    p.setFont(f)
+    p.drawText(pm.rect(), QtCore.Qt.AlignmentFlag.AlignCenter, "摸")
+    p.end()
+    return QtGui.QIcon(pm)
+
+
 class TrayController:
     def __init__(self, settings, pet_window, proactive_talker=None):
         self.settings = settings
@@ -13,11 +32,12 @@ class TrayController:
 
         self.dnd = DndController(settings)
 
-        icon = QtGui.QIcon()
-        # Fallback: standard icon
-        if icon.isNull():
-            icon = QtWidgets.QApplication.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_ComputerIcon)
+        if not QtWidgets.QSystemTrayIcon.isSystemTrayAvailable():
+            # No tray support (or explorer not ready). We'll still run without tray.
+            self.tray = None
+            return
 
+        icon = _default_tray_icon()
         self.tray = QtWidgets.QSystemTrayIcon(icon)
         self.tray.setToolTip(settings.cfg.get("app", {}).get("name", "Cyber Slacker"))
 
@@ -51,17 +71,25 @@ class TrayController:
         self.tray.activated.connect(self._on_activated)
 
     def show(self):
+        if self.tray is None:
+            return
         self.tray.show()
 
     def _toggle_dnd(self):
+        if self.tray is None:
+            return
         self.dnd.enabled = self.action_dnd.isChecked()
         self.action_dnd.setText(f"勿扰：{'开' if self.dnd.enabled else '关'}")
 
     def _toggle_click_through(self):
+        if self.tray is None:
+            return
         enabled = self.action_click_through.isChecked()
         self.pet_window.set_click_through(enabled)
 
     def _on_activated(self, reason: QtWidgets.QSystemTrayIcon.ActivationReason):
+        if self.tray is None:
+            return
         # single click: toggle visibility
         if reason == QtWidgets.QSystemTrayIcon.ActivationReason.Trigger:
             self.pet_window.setVisible(not self.pet_window.isVisible())

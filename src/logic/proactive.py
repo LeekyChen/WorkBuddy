@@ -155,26 +155,31 @@ class ProactiveTalker(QtCore.QObject):
         self._thread.started.connect(worker.run)
 
         def _cleanup():
+            # Never call wait() from within the same QThread (would warn: Thread tried to wait on itself).
             worker.deleteLater()
-            self._thread.quit()
-            self._thread.wait(1000)
-            self._thread.deleteLater()
+            t = self._thread
+            self._thread = None
+            if t is None:
+                return
+            t.quit()
+            # Let Qt clean up asynchronously.
+            t.finished.connect(t.deleteLater)
 
         def _on_finished(text: str):
             t = (text or "").strip()
             if not t:
                 self.debug.emit("llm empty")
-                _cleanup()
+                QtCore.QTimer.singleShot(0, _cleanup)
                 return
             t = t.replace("\n", " ").strip()
             if len(t) > self.max_reply_chars:
                 t = t[: self.max_reply_chars].rstrip()
             self.say.emit(t)
-            _cleanup()
+            QtCore.QTimer.singleShot(0, _cleanup)
 
         def _on_failed(err: str):
             self.debug.emit(f"llm failed: {err}")
-            _cleanup()
+            QtCore.QTimer.singleShot(0, _cleanup)
 
         worker.finished.connect(_on_finished)
         worker.failed.connect(_on_failed)
