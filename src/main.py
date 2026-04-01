@@ -33,7 +33,7 @@ def main() -> int:
 
     talker = ProactiveTalker(settings=settings, active_app_getter=active_app_getter)
     talker.say.connect(lambda text: bubble.show_text_near(text, pet))
-    # talker.debug.connect(print)  # uncomment for debug
+    talker.debug.connect(print)
     app.aboutToQuit.connect(talker.stop)
     talker.start()
 

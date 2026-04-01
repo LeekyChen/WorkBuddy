@@ -152,29 +152,19 @@ class ProactiveTalker(QtCore.QObject):
         def _runner():
             try:
                 text = fn()
+                t = (text or "").strip().replace("\n", " ")
+                if len(t) > self.max_reply_chars:
+                    t = t[: self.max_reply_chars].rstrip()
 
-                def _deliver_ok():
-                    try:
-                        t = (text or "").strip().replace("\n", " ")
-                        if len(t) > self.max_reply_chars:
-                            t = t[: self.max_reply_chars].rstrip()
-                        if t:
-                            self.say.emit(t)
-                        else:
-                            self.debug.emit("llm empty")
-                    finally:
-                        self._inflight = False
-
-                QtCore.QTimer.singleShot(0, _deliver_ok)
+                # Emit from background thread: Qt will queue it to the main thread.
+                if t:
+                    self.say.emit(t)
+                else:
+                    self.debug.emit("llm empty")
             except Exception as e:
-
-                def _deliver_err():
-                    try:
-                        self.debug.emit(f"llm failed: {e}")
-                    finally:
-                        self._inflight = False
-
-                QtCore.QTimer.singleShot(0, _deliver_err)
+                self.debug.emit(f"llm failed: {e}")
+            finally:
+                self._inflight = False
 
         th = threading.Thread(target=_runner, daemon=True)
         th.start()
