@@ -22,6 +22,30 @@ if sys.platform == "win32":
     GetWindowLongW.restype = ctypes.c_long
     SetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_long]
     SetWindowLongW.restype = ctypes.c_long
+
+    # DWM tweaks (Windows 11 often adds a subtle border/shadow even for frameless windows)
+    try:
+        dwmapi = ctypes.WinDLL("dwmapi", use_last_error=True)
+        DwmSetWindowAttribute = dwmapi.DwmSetWindowAttribute
+        DwmSetWindowAttribute.argtypes = [wintypes.HWND, ctypes.c_uint, ctypes.c_void_p, ctypes.c_uint]
+        DwmSetWindowAttribute.restype = ctypes.c_long
+
+        DWMWA_NCRENDERING_POLICY = 2
+        DWMNCRP_DISABLED = 1
+
+        DWMWA_WINDOW_CORNER_PREFERENCE = 33
+        DWMWCP_DONOTROUND = 1
+
+        DWMWA_BORDER_COLOR = 34
+        DWMWA_COLOR_NONE = 0xFFFFFFFE
+    except Exception:
+        DwmSetWindowAttribute = None
+        DWMWA_NCRENDERING_POLICY = 0
+        DWMNCRP_DISABLED = 0
+        DWMWA_WINDOW_CORNER_PREFERENCE = 0
+        DWMWCP_DONOTROUND = 0
+        DWMWA_BORDER_COLOR = 0
+        DWMWA_COLOR_NONE = 0
 else:
     GetWindowLongW = None
     SetWindowLongW = None
@@ -108,6 +132,10 @@ class PetWindow(QtWidgets.QWidget):
         default_ct = settings.cfg.get("ui", {}).get("click_through_default", True)
         QtCore.QTimer.singleShot(0, lambda: self.set_click_through(bool(default_ct)))
 
+        # Apply Windows DWM attributes after the native window is created.
+        if sys.platform == "win32":
+            QtCore.QTimer.singleShot(0, self._apply_windows_dwm)
+
     def _apply_pixmap(self):
         if self._pixmap is None:
             return
@@ -139,6 +167,33 @@ class PetWindow(QtWidgets.QWidget):
         painter.setBrush(QtGui.QColor(30, 30, 30, 180))
         painter.setPen(QtCore.Qt.PenStyle.NoPen)
         painter.drawEllipse(0, 0, self.width(), self.height())
+
+    def _apply_windows_dwm(self):
+        if sys.platform != "win32":
+            return
+        if 'DwmSetWindowAttribute' not in globals() or DwmSetWindowAttribute is None:
+            return
+        hwnd = int(self.winId())
+
+        def _set(attr: int, value: int):
+            v = ctypes.c_int(value)
+            DwmSetWindowAttribute(hwnd, attr, ctypes.byref(v), ctypes.sizeof(v))
+
+        try:
+            # Disable non-client rendering (border)
+            _set(DWMWA_NCRENDERING_POLICY, DWMNCRP_DISABLED)
+        except Exception:
+            pass
+        try:
+            # Avoid rounded corners (also helps avoid odd outlines)
+            _set(DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND)
+        except Exception:
+            pass
+        try:
+            # Try to suppress border color
+            _set(DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE)
+        except Exception:
+            pass
 
     def mousePressEvent(self, event: QtGui.QMouseEvent):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
