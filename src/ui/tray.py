@@ -41,33 +41,36 @@ class TrayController:
         self.tray = QtWidgets.QSystemTrayIcon(icon)
         self.tray.setToolTip(settings.cfg.get("app", {}).get("name", "Cyber Slacker"))
 
-        menu = QtWidgets.QMenu()
+        # Keep strong refs; otherwise some Windows+network-share setups can behave oddly.
+        self.menu = QtWidgets.QMenu()
 
         self.action_dnd = QtGui.QAction("勿扰：开")
         self.action_dnd.setCheckable(True)
         self.action_dnd.setChecked(self.dnd.enabled)
         self.action_dnd.triggered.connect(self._toggle_dnd)
-        menu.addAction(self.action_dnd)
+        self.menu.addAction(self.action_dnd)
 
         self.action_click_through = QtGui.QAction("鼠标穿透")
         self.action_click_through.setCheckable(True)
         self.action_click_through.setChecked(self.pet_window.is_click_through())
         self.action_click_through.triggered.connect(self._toggle_click_through)
-        menu.addAction(self.action_click_through)
+        self.menu.addAction(self.action_click_through)
 
         if self.proactive_talker is not None:
-            menu.addSeparator()
-            say_now = QtGui.QAction("现在说一句（测试）")
-            say_now.triggered.connect(self.proactive_talker.trigger_once)
-            menu.addAction(say_now)
+            self.menu.addSeparator()
+            self.action_say_now = QtGui.QAction("现在说一句（测试）")
+            self.action_say_now.triggered.connect(self.proactive_talker.trigger_once)
+            self.menu.addAction(self.action_say_now)
+        else:
+            self.action_say_now = None
 
-        menu.addSeparator()
+        self.menu.addSeparator()
 
-        quit_action = QtGui.QAction("退出")
-        quit_action.triggered.connect(QtWidgets.QApplication.quit)
-        menu.addAction(quit_action)
+        self.action_quit = QtGui.QAction("退出")
+        self.action_quit.triggered.connect(QtWidgets.QApplication.quit)
+        self.menu.addAction(self.action_quit)
 
-        self.tray.setContextMenu(menu)
+        self.tray.setContextMenu(self.menu)
         self.tray.activated.connect(self._on_activated)
 
     def show(self):
