@@ -38,11 +38,20 @@ class BubbleWindow(QtWidgets.QWidget):
         self.adjustSize()
 
         # Position: above-right of anchor
-        g = anchor.geometry()
-        top_left = anchor.mapToGlobal(g.topLeft())
+        # Use anchor's local (0,0) mapped to global; using anchor.geometry() for top-level widgets
+        # can produce screen-relative coords already and then get double-mapped.
+        top_left = anchor.mapToGlobal(QtCore.QPoint(0, 0))
         x = top_left.x() + anchor.width() + 8
         y = top_left.y() - self.height() + 8
-        self.move(x, y)
+
+        # Clamp into the current screen (multi-monitor safe)
+        screen = QtGui.QGuiApplication.screenAt(top_left) or QtGui.QGuiApplication.primaryScreen()
+        if screen is not None:
+            r = screen.availableGeometry()
+            x = max(r.left() + 8, min(x, r.right() - self.width() - 8))
+            y = max(r.top() + 8, min(y, r.bottom() - self.height() - 8))
+
+        self.move(int(x), int(y))
 
         self.show()
         self.raise_()
