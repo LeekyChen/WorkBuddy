@@ -7,6 +7,37 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+
+def _time_bucket(now: datetime) -> str:
+    h = now.hour
+    if 5 <= h < 9:
+        return "清晨"
+    if 9 <= h < 11:
+        return "上午"
+    if 11 <= h < 14:
+        return "中午"
+    if 14 <= h < 18:
+        return "下午"
+    if 18 <= h < 22:
+        return "晚上"
+    return "深夜"
+
+
+def _topic_hook(now: datetime) -> str:
+    # Simple time-of-day hooks; can be expanded later.
+    b = _time_bucket(now)
+    if b == "清晨":
+        return "醒了就别硬卷，先把魂捡回来。"
+    if b == "上午":
+        return "上午精神好？那也别太认真。"
+    if b == "中午":
+        return "到饭点了，吃饭没？别拿咖啡当正餐。"
+    if b == "下午":
+        return "下午犯困正常，先摸两分钟再说。"
+    if b == "晚上":
+        return "晚上了，还在敲？你是在和需求谈恋爱吗。"
+    return "都这个点了，还不睡？明天的你会来骂你的。"
+
 from PySide6 import QtCore
 
 from .classifier import AppClassifier
@@ -121,12 +152,17 @@ class ProactiveTalker(QtCore.QObject):
         process_name = getattr(info, "process_name", "") if info else ""
         classified = self.classifier.classify(process_name)
 
+        now = datetime.now()
+        seed = random.randint(1, 1_000_000_000)
         ctx = PromptContext(
             process_name=classified.process_name,
             category=classified.category,
             dnd_now=False,
             snark_level=self.snark_level,
             max_reply_chars=self.max_reply_chars,
+            seed=seed,
+            time_bucket=_time_bucket(now),
+            topic_hook=_topic_hook(now),
         )
         prompt = build_proactive_prompt(self.persona, ctx)
 
