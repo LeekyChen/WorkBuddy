@@ -166,14 +166,14 @@ class ProactiveTalker(QtCore.QObject):
         )
         prompt = build_proactive_prompt(self.persona, ctx)
 
-        def _call_llm() -> str:
+        def _call_llm():
             # max_tokens/num_predict is a rough bound; we also hard-trim by chars later.
             if self.adapter == "openai_compat":
                 res = self.llm.complete_openai_compat(prompt=prompt, temperature=self.temperature, max_tokens=96)
-                return (res.text or "").strip()
+                return res
             if self.adapter in ("ollama", "ollama_chat"):
                 res = self.llm.chat_ollama(prompt=prompt, temperature=self.temperature, num_predict=96)
-                return (res.text or "").strip()
+                return res
             raise RuntimeError(f"Unsupported model.adapter: {self.adapter}")
 
         self._run_in_thread(_call_llm)
@@ -190,7 +190,8 @@ class ProactiveTalker(QtCore.QObject):
 
         def _runner():
             try:
-                text = fn()
+                res = fn()
+                text = getattr(res, "text", "")
                 t = (text or "").strip().replace("\n", " ")
                 if len(t) > self.max_reply_chars:
                     t = t[: self.max_reply_chars].rstrip()
@@ -199,7 +200,14 @@ class ProactiveTalker(QtCore.QObject):
                 if t:
                     self.say.emit(t)
                 else:
-                    self.debug.emit("llm empty")
+                    # Helpful diagnostics without leaking content
+                    keys = []
+                    try:
+                        raw = getattr(res, "raw", {}) or {}
+                        keys = list(raw.keys())[:20]
+                    except Exception:
+                        keys = []
+                    self.debug.emit(f"llm empty (adapter={self.adapter}, base_url={self.llm.base_url}, keys={keys})")
             except Exception as e:
                 self.debug.emit(f"llm failed: {e}")
             finally:

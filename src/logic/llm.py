@@ -89,8 +89,14 @@ class LlmClient:
 
         text = ""
         try:
-            # Ollama returns { message: { content: "..." } }
+            # Ollama /api/chat returns { message: { content: "..." } }
             text = (data.get("message") or {}).get("content") or ""
+            # Be tolerant if some proxies use a different shape.
+            if not text:
+                text = data.get("response") or ""  # /api/generate-style
+            if not text:
+                # OpenAI-chat style fallback
+                text = (((data.get("choices") or [{}])[0].get("message") or {}).get("content")) or ""
         except Exception:
             text = ""
 
