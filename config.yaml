@@ -6,7 +6,7 @@ ui:
   frameless: true
   transparent: true
   # 桌宠图片（相对于 pet/ 目录）
-  avatar_path: "somebody_cutout.png"
+  avatar_path: "somebody.png"
 
   # 鼠标穿透：开启后你点不到桌宠（右键/拖拽/双击都会穿透到下层窗口）
   click_through_default: false
@@ -21,8 +21,8 @@ proactive_talk:
   enabled: true
   # 首次启动后，过几秒就先说一句，方便验收
   startup_delay_seconds: 12
-  interval_min_minutes: 1
-  interval_max_minutes: 1
+  interval_min_minutes: 10
+  interval_max_minutes: 15
 
 # 勿扰：不主动说话（默认先关闭，方便你测试“主动搭话”）
 dnd:
@@ -33,7 +33,7 @@ dnd:
 
 persona:
   agent_md_path: "AGENT.md"
-  snark_level: 2
+  snark_level: 1
   max_reply_chars: 60
 
 apps:
@@ -61,5 +61,5 @@ apps:
       - "Discord.exe"
 
 model:
-  adapter: "openai_compat"
+  adapter: "ollama_chat"
   temperature: 0.8

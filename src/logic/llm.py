@@ -26,6 +26,7 @@ class LlmClient:
         temperature: float = 0.8,
         max_tokens: int = 80,
     ) -> LlmResult:
+        """OpenAI-compatible /v1/completions."""
         url = f"{self.base_url}/v1/completions"
         headers = {
             "Content-Type": "application/json",
@@ -49,6 +50,47 @@ class LlmClient:
         try:
             # OpenAI-style completions
             text = (data.get("choices") or [{}])[0].get("text") or ""
+        except Exception:
+            text = ""
+
+        return LlmResult(text=text.strip(), raw=data)
+
+    def chat_ollama(
+        self,
+        *,
+        prompt: str,
+        temperature: float = 0.8,
+        num_predict: int = 96,
+    ) -> LlmResult:
+        """Ollama /api/chat.
+
+        Example:
+          POST http://localhost:11434/api/chat
+          {"model":"qwen3.5:0.8b","messages":[{"role":"user","content":"Hello"}],"stream":false}
+        """
+        url = f"{self.base_url}/api/chat"
+        headers = {"Content-Type": "application/json"}
+
+        payload: Dict[str, Any] = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "user", "content": prompt},
+            ],
+            "stream": False,
+            "options": {
+                "temperature": float(temperature),
+                "num_predict": int(num_predict),
+            },
+        }
+
+        r = requests.post(url, headers=headers, json=payload, timeout=self.timeout_seconds)
+        r.raise_for_status()
+        data = r.json()
+
+        text = ""
+        try:
+            # Ollama returns { message: { content: "..." } }
+            text = (data.get("message") or {}).get("content") or ""
         except Exception:
             text = ""
 

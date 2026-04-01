@@ -167,11 +167,14 @@ class ProactiveTalker(QtCore.QObject):
         prompt = build_proactive_prompt(self.persona, ctx)
 
         def _call_llm() -> str:
-            if self.adapter != "openai_compat":
-                raise RuntimeError(f"Unsupported model.adapter: {self.adapter}")
-            # max_tokens is a rough bound; we also hard-trim by chars later.
-            res = self.llm.complete_openai_compat(prompt=prompt, temperature=self.temperature, max_tokens=96)
-            return (res.text or "").strip()
+            # max_tokens/num_predict is a rough bound; we also hard-trim by chars later.
+            if self.adapter == "openai_compat":
+                res = self.llm.complete_openai_compat(prompt=prompt, temperature=self.temperature, max_tokens=96)
+                return (res.text or "").strip()
+            if self.adapter in ("ollama", "ollama_chat"):
+                res = self.llm.chat_ollama(prompt=prompt, temperature=self.temperature, num_predict=96)
+                return (res.text or "").strip()
+            raise RuntimeError(f"Unsupported model.adapter: {self.adapter}")
 
         self._run_in_thread(_call_llm)
 

@@ -29,7 +29,7 @@ def load_settings(base_dir: Path) -> Settings:
     env = {
         "BASE_URL": os.getenv("BASE_URL", "http://localhost:11434"),
         "API_KEY": os.getenv("API_KEY", ""),
-        "MODEL_NAME": os.getenv("MODEL_NAME", "qwen3.5"),
+        "MODEL_NAME": os.getenv("MODEL_NAME", "qwen3.5:0.8b"),
         "HTTP_TIMEOUT_SECONDS": os.getenv("HTTP_TIMEOUT_SECONDS", "20"),
     }
 

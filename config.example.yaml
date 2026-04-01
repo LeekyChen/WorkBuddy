@@ -63,6 +63,6 @@ apps:
       - "Discord.exe"
 
 model:
-  # adapter: "ollama" | "openai_compat"
-  adapter: "ollama"
+  # adapter: "ollama_chat" | "openai_compat"
+  adapter: "ollama_chat"
   temperature: 0.8
