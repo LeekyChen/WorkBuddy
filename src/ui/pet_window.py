@@ -39,6 +39,9 @@ class PetWindow(QtWidgets.QWidget):
 
         flags = QtCore.Qt.WindowType.Tool | QtCore.Qt.WindowType.FramelessWindowHint
         flags |= QtCore.Qt.WindowType.WindowStaysOnTopHint
+        # Helps remove Windows' subtle outline/shadow on some setups.
+        if hasattr(QtCore.Qt.WindowType, "NoDropShadowWindowHint"):
+            flags |= QtCore.Qt.WindowType.NoDropShadowWindowHint
         self.setWindowFlags(flags)
 
         # Transparent background
@@ -73,7 +76,14 @@ class PetWindow(QtWidgets.QWidget):
             target_h = int(ui_cfg.get("avatar_height", 90))
             self.setFixedSize(target_w, target_h)
             self._apply_pixmap()
-            # Click region matches image rect (no mask)
+            # Make hit-test region match visible pixels (best-effort).
+            # This removes the rectangular outline feeling when avatar has transparent background.
+            try:
+                mask = self.label.pixmap().mask() if self.label.pixmap() is not None else None
+                if mask is not None:
+                    self.setMask(mask)
+            except Exception:
+                pass
         else:
             self.setFixedSize(90, 90)
             # Make window hit-test region roughly circular (helps avoid a visible square boundary on some setups)
@@ -117,8 +127,12 @@ class PetWindow(QtWidgets.QWidget):
         self._apply_pixmap()
 
     def paintEvent(self, event):
-        # If using an avatar image, let the pixmap be the visual.
+        # If using an avatar image, still paint a fully-transparent background
+        # to avoid some platforms showing a faint window rectangle.
         if self._pixmap is not None:
+            painter = QtGui.QPainter(self)
+            painter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_Source)
+            painter.fillRect(self.rect(), QtCore.Qt.GlobalColor.transparent)
             return
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
