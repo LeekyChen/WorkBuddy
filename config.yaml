@@ -6,7 +6,7 @@ ui:
   frameless: true
   transparent: true
   # 桌宠图片（相对于 pet/ 目录）
-  avatar_path: "somebody.jpg"
+  avatar_path: "somebody_cutout.png"
 
   # 鼠标穿透：开启后你点不到桌宠（右键/拖拽/双击都会穿透到下层窗口）
   click_through_default: false
