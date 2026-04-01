@@ -46,19 +46,46 @@ class PetWindow(QtWidgets.QWidget):
 
         self._drag_offset = None
 
-        # Simple placeholder: a colored circle + text
-        self.label = QtWidgets.QLabel("摸")
+        # Avatar (image) label
+        self.label = QtWidgets.QLabel("")
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet(
-            "QLabel { color: white; font-size: 18px; font-weight: 700; }"
-        )
+        self.label.setStyleSheet("QLabel { background: transparent; }")
 
-        self.setFixedSize(90, 90)
-        # Make window hit-test region roughly circular (helps avoid a visible square boundary on some setups)
-        try:
-            self.setMask(QtGui.QRegion(QtCore.QRect(0, 0, self.width(), self.height()), QtGui.QRegion.RegionType.Ellipse))
-        except Exception:
-            pass
+        ui_cfg = (settings.cfg.get("ui", {}) or {})
+        avatar_path = ui_cfg.get("avatar_path")
+
+        self._pixmap = None
+        if avatar_path:
+            p = QtGui.QPixmap(str(settings.base_dir / str(avatar_path)))
+            if not p.isNull():
+                self._pixmap = p
+
+        if self._pixmap is None:
+            # Fallback placeholder
+            self.label.setText("摸")
+            self.label.setStyleSheet(
+                "QLabel { color: white; font-size: 18px; font-weight: 700; background: transparent; }"
+            )
+
+        # Window size follows avatar (bounded), else default 90x90
+        if self._pixmap is not None:
+            target_w = int(ui_cfg.get("avatar_width", 90))
+            target_h = int(ui_cfg.get("avatar_height", 90))
+            self.setFixedSize(target_w, target_h)
+            self._apply_pixmap()
+            # Click region matches image rect (no mask)
+        else:
+            self.setFixedSize(90, 90)
+            # Make window hit-test region roughly circular (helps avoid a visible square boundary on some setups)
+            try:
+                self.setMask(
+                    QtGui.QRegion(
+                        QtCore.QRect(0, 0, self.width(), self.height()),
+                        QtGui.QRegion.RegionType.Ellipse,
+                    )
+                )
+            except Exception:
+                pass
 
         lay = QtWidgets.QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -71,7 +98,28 @@ class PetWindow(QtWidgets.QWidget):
         default_ct = settings.cfg.get("ui", {}).get("click_through_default", True)
         QtCore.QTimer.singleShot(0, lambda: self.set_click_through(bool(default_ct)))
 
+    def _apply_pixmap(self):
+        if self._pixmap is None:
+            return
+        scaled = self._pixmap.scaled(
+            self.size(),
+            QtCore.Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+            QtCore.Qt.TransformationMode.SmoothTransformation,
+        )
+        # center-crop
+        x = max(0, (scaled.width() - self.width()) // 2)
+        y = max(0, (scaled.height() - self.height()) // 2)
+        cropped = scaled.copy(x, y, self.width(), self.height())
+        self.label.setPixmap(cropped)
+
+    def resizeEvent(self, event: QtGui.QResizeEvent):
+        super().resizeEvent(event)
+        self._apply_pixmap()
+
     def paintEvent(self, event):
+        # If using an avatar image, let the pixmap be the visual.
+        if self._pixmap is not None:
+            return
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         painter.setBrush(QtGui.QColor(30, 30, 30, 180))
