@@ -36,6 +36,35 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
+## Docker（Linux 宿主机 X11）
+
+> 说明：这是 Qt 桌面程序，Docker 里跑需要宿主机提供显示（X11）。
+> Ollama 不打进镜像里：请用 `BASE_URL` 指向你自己的 Ollama（本机/局域网/远端）。
+
+### 1) 构建镜像
+
+```bash
+docker build -t cyber-slacker-pet:latest .
+```
+
+### 2) 运行（最简单：host 网络 + X11）
+
+```bash
+xhost +local:docker
+
+docker run --rm -it \
+  --net=host \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  -e BASE_URL=http://127.0.0.1:11434 \
+  -e MODEL_NAME=qwen3.5:0.8b \
+  -e LLM_ADAPTER=ollama_chat \
+  -e OLLAMA_THINK=0 \
+  cyber-slacker-pet:latest
+```
+
+也可以参考 `docker-compose.example.yml`。
+
 ## 下一步（建议优先级）
 
 - P0：托盘菜单（退出/勿扰/穿透开关/频率调整）完善

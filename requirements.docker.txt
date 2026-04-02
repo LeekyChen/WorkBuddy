@@ -1,0 +1,7 @@
+# Minimal runtime deps for the pet app inside Linux Docker
+# (Do NOT use the repo-level requirements.txt; it contains Windows-only and heavyweight ML deps)
+PySide6==6.11.0
+python-dotenv==1.1.1
+PyYAML==6.0.2
+psutil==7.2.2
+requests==2.32.5

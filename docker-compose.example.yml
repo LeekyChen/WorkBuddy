@@ -1,0 +1,23 @@
+services:
+  pet:
+    build: .
+    environment:
+      # Point to Ollama (adjust for your setup)
+      BASE_URL: "http://host.docker.internal:11434"
+      MODEL_NAME: "qwen3.5:0.8b"
+      LLM_ADAPTER: "ollama_chat"
+      OLLAMA_THINK: "0"
+      HTTP_TIMEOUT_SECONDS: "60"
+
+      # X11 forwarding (Linux host)
+      DISPLAY: "${DISPLAY}"
+
+      # Enable debugging if needed
+      # LLM_LOG_PROMPT: "1"
+      # LLM_LOG_RESPONSE: "1"
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    # Simplest on Linux host
+    network_mode: host
