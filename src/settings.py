@@ -33,9 +33,12 @@ def load_settings(base_dir: Path) -> Settings:
         "MODEL_NAME": os.getenv("MODEL_NAME", "qwen3.5:0.8b"),
         "HTTP_TIMEOUT_SECONDS": os.getenv("HTTP_TIMEOUT_SECONDS", "20"),
         # Adapter override (optional):
-        # - ollama_chat / ollama   -> POST {BASE_URL}/api/chat
+        # - ollama_chat / ollama        -> POST {BASE_URL}/api/chat
         # - completions / openai_compat -> POST {BASE_URL}/v1/completions
         "LLM_ADAPTER": os.getenv("LLM_ADAPTER", ""),
+        # Debug logging (NEVER prints API_KEY; may print prompt/context)
+        "LLM_LOG_PROMPT": os.getenv("LLM_LOG_PROMPT", "0"),
+        "LLM_LOG_PROMPT_MAX_CHARS": os.getenv("LLM_LOG_PROMPT_MAX_CHARS", "4000"),
     }
 
     # 2) yaml config (user config.yaml overrides example)

@@ -95,6 +95,9 @@ class ProactiveTalker(QtCore.QObject):
             timeout_seconds=timeout,
         )
 
+        self.log_prompt = str(settings.env.get("LLM_LOG_PROMPT", "0") or "0").strip() in ("1", "true", "True", "yes")
+        self.log_prompt_max_chars = int(settings.env.get("LLM_LOG_PROMPT_MAX_CHARS", "4000") or "4000")
+
         self._timer = QtCore.QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._on_timeout)
@@ -169,12 +172,22 @@ class ProactiveTalker(QtCore.QObject):
         prompt = build_proactive_prompt(self.persona, ctx)
 
         def _call_llm():
+            # Optional debug: log the exact prompt we send.
+            if self.log_prompt:
+                p = prompt
+                if len(p) > self.log_prompt_max_chars:
+                    p = p[: self.log_prompt_max_chars] + "\n...[truncated]"
+                self.debug.emit(
+                    "llm prompt >>>\n"
+                    + p.replace("\r\n", "\n")
+                    + "\n<<< end prompt"
+                )
+
             # max_tokens/num_predict is a rough bound; we also hard-trim by chars later.
             if self.adapter in ("openai_compat", "completions"):
                 res = self.llm.complete_openai_compat(prompt=prompt, temperature=self.temperature, max_tokens=96)
                 return res
             if self.adapter in ("ollama", "ollama_chat"):
-                # Kept for compatibility, but recommend /v1/completions everywhere.
                 res = self.llm.chat_ollama(prompt=prompt, temperature=self.temperature, num_predict=96)
                 return res
             raise RuntimeError(f"Unsupported model.adapter: {self.adapter}")

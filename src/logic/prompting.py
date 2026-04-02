@@ -47,7 +47,9 @@ def build_proactive_prompt(persona: Persona, ctx: PromptContext) -> str:
     ]
 
     # When DND is on, we shouldn't proactively talk (caller should skip). Still include for safety.
-    task = "【任务】结合话题钩子与上下文，吐槽/关怀一句；尽量不要和你刚才说过的重复。"
+    # Some tiny models behave oddly on English-only / too abstract prompts.
+    # Make the instruction explicitly conversational.
+    task = "【任务】你在跟我聊天：结合话题钩子与上下文，吐槽/关怀一句；尽量不要和你刚才说过的重复。"
 
     parts = [
         "\n".join(system_bits),
