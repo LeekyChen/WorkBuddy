@@ -210,7 +210,19 @@ class ProactiveTalker(QtCore.QObject):
                         keys = list(raw.keys())[:20]
                     except Exception:
                         keys = []
-                    self.debug.emit(f"llm empty (adapter={self.adapter}, base_url={self.llm.base_url}, keys={keys})")
+                    # Include safe Ollama hints when available (no prompt/response content).
+                    extra = ""
+                    try:
+                        raw = getattr(res, "raw", {}) or {}
+                        if "done_reason" in raw:
+                            extra += f", done_reason={raw.get('done_reason')}"
+                        if "eval_count" in raw:
+                            extra += f", eval_count={raw.get('eval_count')}"
+                    except Exception:
+                        extra = ""
+                    self.debug.emit(
+                        f"llm empty (adapter={self.adapter}, base_url={self.llm.base_url}, keys={keys}{extra})"
+                    )
             except Exception as e:
                 self.debug.emit(f"llm failed: {e}")
             finally:

@@ -24,7 +24,10 @@ def build_proactive_prompt(persona: Persona, ctx: PromptContext) -> str:
     persona_name = persona.meta.get("name", "赛博摸鱼搭子")
     tone = (((persona.meta.get("style") or {}).get("tone")) if isinstance(persona.meta.get("style"), dict) else None) or ""
 
-    instructions = persona.body.strip()
+    # Small local models may have tiny context windows; keep persona body bounded.
+    instructions = (persona.body or "").strip()
+    if len(instructions) > 800:
+        instructions = instructions[:800].rstrip()
 
     system_bits = [
         f"你叫{persona_name}。{('口吻：' + tone) if tone else ''}",

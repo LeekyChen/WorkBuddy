@@ -93,16 +93,24 @@ class LlmClient:
 
         data = self._post(url, headers=headers, payload=payload)
 
+        # Ollama sometimes returns an empty assistant message (e.g. context too long, model refusing,
+        # or generation constrained). Keep extraction tolerant.
         text = ""
         try:
-            # Ollama /api/chat returns { message: { content: "..." } }
-            text = (data.get("message") or {}).get("content") or ""
-            # Be tolerant if some proxies use a different shape.
+            msg = (data.get("message") or {})
+            text = msg.get("content") or ""
             if not text:
                 text = data.get("response") or ""  # /api/generate-style
             if not text:
                 # OpenAI-chat style fallback
                 text = (((data.get("choices") or [{}])[0].get("message") or {}).get("content")) or ""
+
+            # If still empty, surface some debug hints (kept in raw; caller prints keys only).
+            # Some Ollama builds return a 'done_reason' like 'length'/'stop'.
+            if not text:
+                done_reason = data.get("done_reason")
+                if done_reason and isinstance(done_reason, str):
+                    text = ""  # keep empty; reason available in raw
         except Exception:
             text = ""
 
