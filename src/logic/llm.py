@@ -14,10 +14,16 @@ class LlmResult:
 
 class LlmClient:
     def __init__(self, *, base_url: str, api_key: str, model_name: str, timeout_seconds: float = 20.0):
-        self.base_url = base_url.rstrip("/")
+        # base_url should be the server root, e.g. http://localhost:11434 or https://cpa.oldbird.cn
+        self.base_url = (base_url or "").rstrip("/")
         self.api_key = api_key
         self.model_name = model_name
         self.timeout_seconds = timeout_seconds
+
+    def _post(self, url: str, *, headers: Dict[str, str], payload: Dict[str, Any]) -> Dict[str, Any]:
+        r = requests.post(url, headers=headers, json=payload, timeout=self.timeout_seconds)
+        r.raise_for_status()
+        return r.json()
 
     def complete_openai_compat(
         self,
@@ -42,9 +48,7 @@ class LlmClient:
             "max_tokens": int(max_tokens),
         }
 
-        r = requests.post(url, headers=headers, json=payload, timeout=self.timeout_seconds)
-        r.raise_for_status()
-        data = r.json()
+        data = self._post(url, headers=headers, payload=payload)
 
         text = ""
         try:
@@ -87,9 +91,7 @@ class LlmClient:
             },
         }
 
-        r = requests.post(url, headers=headers, json=payload, timeout=self.timeout_seconds)
-        r.raise_for_status()
-        data = r.json()
+        data = self._post(url, headers=headers, payload=payload)
 
         text = ""
         try:

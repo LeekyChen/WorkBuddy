@@ -82,7 +82,9 @@ class ProactiveTalker(QtCore.QObject):
         self.max_reply_chars = int(persona_cfg.get("max_reply_chars", 60))
 
         model_cfg = settings.cfg.get("model", {}) or {}
-        self.adapter = str(model_cfg.get("adapter", "ollama"))
+        # Priority: env override > yaml
+        env_adapter = (settings.env.get("LLM_ADAPTER", "") or "").strip()
+        self.adapter = str(env_adapter or model_cfg.get("adapter", "ollama"))
         self.temperature = float(model_cfg.get("temperature", 0.8))
 
         timeout = float(settings.env.get("HTTP_TIMEOUT_SECONDS", "20") or "20")
