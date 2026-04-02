@@ -39,6 +39,13 @@ def load_settings(base_dir: Path) -> Settings:
         # Debug logging (NEVER prints API_KEY; may print prompt/context)
         "LLM_LOG_PROMPT": os.getenv("LLM_LOG_PROMPT", "0"),
         "LLM_LOG_PROMPT_MAX_CHARS": os.getenv("LLM_LOG_PROMPT_MAX_CHARS", "4000"),
+        "LLM_LOG_RESPONSE": os.getenv("LLM_LOG_RESPONSE", "0"),
+        "LLM_LOG_RESPONSE_MAX_CHARS": os.getenv("LLM_LOG_RESPONSE_MAX_CHARS", "8000"),
+
+        # Ollama-specific: whether to enable "thinking" mode.
+        # When think=true, some models/UIs may produce long reasoning or even blank user-visible output.
+        # Default: false.
+        "OLLAMA_THINK": os.getenv("OLLAMA_THINK", "0"),
     }
 
     # 2) yaml config (user config.yaml overrides example)

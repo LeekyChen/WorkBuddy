@@ -69,6 +69,7 @@ class LlmClient:
         prompt: str,
         temperature: float = 0.8,
         num_predict: int = 96,
+        think: bool | None = None,
     ) -> LlmResult:
         """Ollama /api/chat.
 
@@ -90,6 +91,10 @@ class LlmClient:
                 "num_predict": int(num_predict),
             },
         }
+        # Ollama-specific: toggle "thinking" mode (some UIs/models may output only thinking or even blank content).
+        # Your curl example uses: {"think": false}
+        if think is not None:
+            payload["think"] = bool(think)
 
         data = self._post(url, headers=headers, payload=payload)
 

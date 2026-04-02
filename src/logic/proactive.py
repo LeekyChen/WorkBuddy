@@ -100,6 +100,8 @@ class ProactiveTalker(QtCore.QObject):
         self.log_response = str(settings.env.get("LLM_LOG_RESPONSE", "0") or "0").strip() in ("1", "true", "True", "yes")
         self.log_response_max_chars = int(settings.env.get("LLM_LOG_RESPONSE_MAX_CHARS", "8000") or "8000")
 
+        self.ollama_think = str(settings.env.get("OLLAMA_THINK", "0") or "0").strip() in ("1", "true", "True", "yes")
+
         self._timer = QtCore.QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._on_timeout)
@@ -190,7 +192,12 @@ class ProactiveTalker(QtCore.QObject):
                 res = self.llm.complete_openai_compat(prompt=prompt, temperature=self.temperature, max_tokens=96)
                 return res
             if self.adapter in ("ollama", "ollama_chat"):
-                res = self.llm.chat_ollama(prompt=prompt, temperature=self.temperature, num_predict=96)
+                res = self.llm.chat_ollama(
+                    prompt=prompt,
+                    temperature=self.temperature,
+                    num_predict=96,
+                    think=self.ollama_think,
+                )
                 return res
             raise RuntimeError(f"Unsupported model.adapter: {self.adapter}")
 
