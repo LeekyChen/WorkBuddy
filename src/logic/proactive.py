@@ -97,6 +97,8 @@ class ProactiveTalker(QtCore.QObject):
 
         self.log_prompt = str(settings.env.get("LLM_LOG_PROMPT", "0") or "0").strip() in ("1", "true", "True", "yes")
         self.log_prompt_max_chars = int(settings.env.get("LLM_LOG_PROMPT_MAX_CHARS", "4000") or "4000")
+        self.log_response = str(settings.env.get("LLM_LOG_RESPONSE", "0") or "0").strip() in ("1", "true", "True", "yes")
+        self.log_response_max_chars = int(settings.env.get("LLM_LOG_RESPONSE_MAX_CHARS", "8000") or "8000")
 
         self._timer = QtCore.QTimer(self)
         self._timer.setSingleShot(True)
@@ -207,6 +209,27 @@ class ProactiveTalker(QtCore.QObject):
         def _runner():
             try:
                 res = fn()
+
+                if self.log_response:
+                    try:
+                        raw = getattr(res, "raw", None)
+                        # Avoid dumping extremely long 'thinking' if the model provides it.
+                        if isinstance(raw, dict):
+                            raw2 = dict(raw)
+                            msg = raw2.get("message")
+                            if isinstance(msg, dict) and "thinking" in msg:
+                                msg2 = dict(msg)
+                                msg2["thinking"] = "[omitted]"
+                                raw2["message"] = msg2
+                            raw = raw2
+
+                        s = "" if raw is None else repr(raw)
+                        if len(s) > self.log_response_max_chars:
+                            s = s[: self.log_response_max_chars] + "...[truncated]"
+                        self.debug.emit("llm raw <<<\n" + s + "\n>>> end raw")
+                    except Exception as _e:
+                        self.debug.emit(f"llm raw log failed: {_e}")
+
                 text = getattr(res, "text", "")
                 t = (text or "").strip().replace("\n", " ")
                 if len(t) > self.max_reply_chars:
